@@ -2,6 +2,7 @@ from os.path import *
 import unittest
 import os
 from unittest.mock import MagicMock
+import datetime
 
 from aris_api import sb6141
 
@@ -24,15 +25,10 @@ FIXTURES = load_fixtures()
 class TestModem(unittest.TestCase):
   def setUp(self):
     self.object = sb6141.Modem()
-    self.info_page = MagicMock(return_value=FIXTURES['cmHelpData.htm'])
-    self.page = MagicMock(return_value=FIXTURES['cmHelpData.htm'])
-    self.object.get_page_content = self.info_page
 
-  def test_gets_info(self):
-    self.object.get_info()
-
-  def test_get_address(self):
-    self.object.get_address()
+  def test_parse_updtime(self):
+    r = self.object.parse_uptime('0 days 2h:43m:49s')
+    self.assertEqual(r, datetime.timedelta(0, 9829))
 
 if __name__ == '__main__':
     unittest.main()

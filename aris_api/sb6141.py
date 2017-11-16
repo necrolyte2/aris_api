@@ -1,6 +1,9 @@
 import re
 
 import requests
+import dateparser
+import time
+from datetime import datetime, timedelta
 from lxml import html
 from lxml.html import tostring
 # http://192.168.100.1/cmHelp.htm
@@ -55,7 +58,32 @@ class Modem(object):
     info['signal_stats'] = self.parse_signal_stats(tables[3])
     return info
 
-  def parse_signal_table(self, table):
+  def get_index(self):
+    tree = self.parse_page_content('indexData.htm')
+    tables = tree.xpath('//table')
+    info = {
+      'task': self.parse_task_table(tables[0]),
+      'operation': self.parse_operation_table(tables[1])
+    }
+    return info
+
+  def parse_task_table(self, table):
+    return {k: {v[0]: 1} for k,v in self.parse_table(table).items()}
+
+  def parse_uptime(self, uptime):
+    p = '(\d+) days (\d+)h:(\d+)m:(\d+)s'
+    r = re.match(p, uptime)
+    v = [int(x) for x in r.groups()]
+    return timedelta(days=v[0], hours=v[1], minutes=v[2], seconds=v[3]).total_seconds()
+
+  def parse_operation_table(self, table):
+    x = self.parse_table(table)
+    return {
+      'current_time_and_date': time.mktime(dateparser.parse(x['current_time_and_date'][0]).timetuple()),
+      'system_up_time': self.parse_uptime(x['system_up_time'][0])
+    }
+
+  def parse_table(self, table):
     info = {}
     for tr in table.xpath('.//tr'):
       k = None
@@ -78,13 +106,25 @@ class Modem(object):
     return info
 
   def parse_downstream(self, table):
-    return self.create_channel_info(self.parse_signal_table(table))
+    return self.create_channel_info(self.parse_table(table))
 
   def parse_upstream(self, table):
-    return self.create_channel_info(self.parse_signal_table(table))
+    return self.create_channel_info(self.parse_table(table))
 
   def parse_signal_stats(self, table):
-    return self.create_channel_info(self.parse_signal_table(table))
+    return self.create_channel_info(self.parse_table(table))
 
 def make_key_name(key):
   return key.strip().lower().replace(' ', '_')
+
+def main():
+  m = Modem()
+  r = {}
+  r['info'] = m.get_info()
+  r['address'] = m.get_address()
+  r['signal'] = m.get_signal()
+  r['index'] = m.get_index()
+  return r
+
+if __name__ == '__main__':
+  print(main()['index'])
