@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 from lxml import html
 from lxml.html import tostring
+
 # http://192.168.100.1/cmHelp.htm
 
 class Modem(object):
@@ -30,9 +31,12 @@ class Modem(object):
     info = {}
     for x in tree.xpath('//table')[0].xpath('//tr/td')[0]:
       s = str(tostring(x)).replace('<br>','').strip()
-      s = s.split(':', 1)
-      if s[0] != '':
-        info[make_key_name(s[0])] = s[1].strip()
+      s = s.strip().split(':', 1)
+      try:
+        if s[0] != '':
+          info[make_key_name(s[1])] = s[1].strip()
+      except IndexError as e:
+        continue
     return info
 
   def get_address(self):
@@ -135,7 +139,7 @@ class Modem(object):
 def make_key_name(key):
   return key.strip().lower().replace(' ', '_')
 
-def main():
+def stats():
   m = Modem()
   r = {}
   r['info'] = m.get_info()
@@ -145,4 +149,4 @@ def main():
   return r
 
 if __name__ == '__main__':
-  print(main()['index'])
+  print(stats()['index'])

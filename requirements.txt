@@ -2,3 +2,4 @@ flask
 dateparser
 lxml
 requests
+prometheus_client
