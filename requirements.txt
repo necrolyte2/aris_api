@@ -1,3 +1,4 @@
 flask
 dateparser
 lxml
+requests
