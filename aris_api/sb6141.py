@@ -4,26 +4,12 @@ import requests
 import dateparser
 import time
 from datetime import datetime, timedelta
-from lxml import html
 from lxml.html import tostring
-# http://192.168.100.1/cmHelp.htm
 
-class Modem(object):
-  def __init__(self, address='192.168.100.1', scheme='http'):
-    self.address = address
-    self.scheme = scheme
+import modem
+import util
 
-  def get_page(self, path):
-    r = requests.get(self.scheme + '://' + self.address + '/' + path)
-    return r
-
-  def get_page_content(self, path):
-    return self.get_page(path).content
-
-  def parse_page_content(self, path):
-    page = self.get_page_content(path)
-    return html.fromstring(page)
-
+class SB6141(modem.Modem):
   def get_info(self):
     tree = self.parse_page_content('cmHelpData.htm')
     t = tree.xpath('//table/tbody')[0]
@@ -32,7 +18,7 @@ class Modem(object):
       s = str(tostring(x)).replace('<br>','').strip()
       s = s.split(':', 1)
       if s[0] != '':
-        info[make_key_name(s[0])] = s[1].strip()
+        info[util.make_key_name(s[0])] = s[1].strip()
     return info
 
   def get_address(self):
@@ -42,7 +28,7 @@ class Modem(object):
     k = None
     for a in x.xpath('.//td/text()'):
       if k is None:
-        k = make_key_name(a)
+        k = util.make_key_name(a)
         d[a] = None
       else:
         d[k] = a
@@ -83,19 +69,6 @@ class Modem(object):
       'system_up_time': self.parse_uptime(x['system_up_time'][0])
     }
 
-  def parse_table(self, table):
-    info = {}
-    for tr in table.xpath('.//tr'):
-      k = None
-      for td in tr.xpath('.//td/text()'):
-        td = td.encode('ascii', 'ignore').strip()
-        if k is None:
-          k = make_key_name(td)
-          info[k] = []
-        else:
-          info[k].append(td.strip())
-    return info
-
   def create_channel_info(self, parsed_table):
     channels = parsed_table['channel_id'] 
     keys = filter(lambda x: x != 'channel_id', parsed_table.keys())
@@ -114,11 +87,8 @@ class Modem(object):
   def parse_signal_stats(self, table):
     return self.create_channel_info(self.parse_table(table))
 
-def make_key_name(key):
-  return key.strip().lower().replace(' ', '_')
-
 def main():
-  m = Modem()
+  m = SB6141()
   r = {}
   r['info'] = m.get_info()
   r['address'] = m.get_address()
