@@ -8,7 +8,7 @@ import sys
 
 class SB6190(sb.SB):
   def parse_table(self, table):
-    headers = list(table.xpath('.//tr[2]//strong/text()'))
+    headers = [util.make_key_name(x) for x in table.xpath('.//tr[2]//strong/text()')]
     del headers[2]
     new_info = {k:[] for k in headers}
     infos = super(SB6190, self).parse_table(table).values()
@@ -50,7 +50,7 @@ class SB6190(sb.SB):
   def get_index(self):
     return {}
 
-def main():
+def stats():
   m = SB6190()
   r = {}
   r['info'] = m.get_info()
@@ -60,4 +60,4 @@ def main():
   return r
 
 if __name__ == '__main__':
-  print(main()['info'])
+  print(stats())

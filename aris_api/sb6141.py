@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 from lxml.html import tostring
 
+# http://192.168.100.1/cmHelp.htm
 import modem
 import util
 
@@ -16,9 +17,12 @@ class SB6141(modem.Modem):
     info = {}
     for x in tree.xpath('//table')[0].xpath('//tr/td')[0]:
       s = str(tostring(x)).replace('<br>','').strip()
-      s = s.split(':', 1)
-      if s[0] != '':
-        info[util.make_key_name(s[0])] = s[1].strip()
+      s = s.strip().split(':', 1)
+      try:
+        if s[0] != '':
+          info[make_key_name(s[1])] = s[1].strip()
+      except IndexError as e:
+        continue
     return info
 
   def get_address(self):
@@ -78,16 +82,34 @@ class SB6141(modem.Modem):
         info[k].append({'channel_id':channel, 'value': parsed_table[k][i]})
     return info
 
+  def parse_value_unit(self, str_value):
+    x = str_value.split(' ')
+    return [float(x[0]), x[1]]
+
+  def value_convert_list(self, table_list):
+    for i,x in enumerate(table_list):
+      j = self.parse_value_unit(x['value'])
+      table_list[i]['value'] = j[0]
+      table_list[i]['unit'] = j[1]
+
   def parse_downstream(self, table):
-    return self.create_channel_info(self.parse_table(table))
+    x = self.create_channel_info(self.parse_table(table))
+    self.value_convert_list(x['frequency'])
+    self.value_convert_list(x['power_level'])
+    self.value_convert_list(x['signal_to_noise_ratio'])
+    return x
 
   def parse_upstream(self, table):
-    return self.create_channel_info(self.parse_table(table))
+    x =  self.create_channel_info(self.parse_table(table))
+    self.value_convert_list(x['frequency'])
+    self.value_convert_list(x['power_level'])
+    self.value_convert_list(x['symbol_rate'])
+    return x
 
   def parse_signal_stats(self, table):
     return self.create_channel_info(self.parse_table(table))
 
-def main():
+def stats():
   m = SB6141()
   r = {}
   r['info'] = m.get_info()
@@ -97,4 +119,4 @@ def main():
   return r
 
 if __name__ == '__main__':
-  print(main()['index'])
+  print(stats()['index'])
